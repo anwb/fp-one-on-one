@@ -1,5 +1,14 @@
+double :: Num a => a -> a
 double x = x * 2
+
+palindrome :: Eq a => [a] -> Bool
 palindrome xs = reverse xs == xs
-myfun f x = f x
+
+myfun1 :: (a -> b) -> a -> b
+myfun1 f x = f x
+
+twice :: (a -> a) -> a -> a
 twice f x = f (f x)
-f xs = take 3 (reverse xs)
+
+myfun2 :: [a] -> [a]
+myfun2 xs = take 3 (reverse xs)
