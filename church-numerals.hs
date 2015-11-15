@@ -29,10 +29,10 @@ cadd x y = \s z -> x s (y s z)
 -- implement with y times s as the super-succ function
 -- \s z -> (x . y) s z :: \s z -> x (y s) z 
 cmul :: Church a -> Church a -> Church a
-cmul x y = \s z -> (x . y) s z
+cmul x y = x . y
 
 -- does not compile
 --cexp :: Church a -> Church a -> Church a
---cexp x y = \s z ->  (y x) s z
+--cexp x y = y x
 
 
