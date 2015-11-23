@@ -1,5 +1,6 @@
 module HuttonMonads where
-import Prelude hiding (map, Maybe, Nothing, Just, (>>=), Monad)
+import Prelude hiding (map, Maybe, Nothing, Just)
+
 
 -- Part 1 : Abstracting programming patterns
 --
@@ -62,14 +63,14 @@ eval'' (Div x y) = apply f (eval'' x `seqn` eval'' y)
 
 -- Combining sequencing and processing
 --
-(>>=)         :: Maybe a -> (a -> Maybe b) -> Maybe b
-Nothing  >>= _ = Nothing
-(Just x) >>= f = f x      
+(>>>=)         :: Maybe a -> (a -> Maybe b) -> Maybe b
+Nothing  >>>= _ = Nothing
+(Just x) >>>= f = f x      
 
 eval'''          :: Expr -> Maybe Int
 eval''' (Val n)   = Just n            
-eval''' (Div x y) = eval''' x >>= \n ->
-                    eval''' y >>= \m ->
+eval''' (Div x y) = eval''' x >>>= \n ->
+                    eval''' y >>>= \m ->
                     safeDiv n m         
 
 {- Exercises
@@ -98,16 +99,119 @@ eval (Op x y z) = do m <- seqn (eval x)
                      f m n o = ...
 -}
 
+
 -- Part 2 : Monads in Haskell
 --
-class Monad m where
-  return :: a -> m a
-  (>>>=) :: m a -> (a -> m b) -> m b
 
+-- Base.Monad is defined as
+--
+-- class Monad m where
+--   return :: a -> m a
+--   (>>=) :: m a -> (a -> m b) -> m b
+
+-- Maybe monad
+--
 instance Monad Maybe where
   -- return      :: a -> m a
   return   x      = Just x
 
-  -- (>>>=)      :: m a -> (a -> m b) -> m b
-  Nothing  >>>= _ = Nothing
-  (Just x) >>>= f = f x
+  -- (>>=)      :: m a -> (a -> m b) -> m b
+  Nothing  >>= _ = Nothing
+  (Just x) >>= f = f x
+
+-- List monad defined in GHC.Base
+--
+-- instance Monad [] where
+--   -- return  :: a -> m a
+--   return   x  = [x]
+--   -- (>>=) :: m a -> (a -> m b) -> m b
+--   xs  >>= f = concat (map f xs)
+
+-- Use case of list monad
+--
+pairs       :: [a] -> [b] -> [(a,b)]
+pairs xs ys  = do x <- xs
+                  y <- ys
+                  return (x,y)  
+
+-- Similarly implemented using list comprehension
+pairs'       :: [a] -> [b] -> [(a,b)]
+pairs' xs ys  = [(x,y) | x <- xs, y <- ys]
+
+
+-- State monad
+--
+type State = Int
+
+newtype ST a = S (State -> (a, State))
+
+applyS         :: ST a -> State -> (a, State)
+applyS (S f) x  = f x
+
+instance Monad ST where
+  --   |                 ^
+  -- x |    +-------+    | x 
+  --   `----|-------|----'
+  --        |       |
+  -- -------|-------|------>
+  --    s   +-------+   s  
+  --
+  -- return :: a -> ST a
+  return x   = S (\s -> (x,s))
+
+  --                                       ^ 
+  --         +-------+   x    +-------+    |
+  --    s    |       | -----> |       | ---'
+  --  -----> |  st   |        |   f   |
+  --         |       | -----> |       | ----->
+  --         +-------+   s'   +-------+
+  --          
+  -- (>>=) :: ST a -> (a -> ST b) -> ST b
+  st >>= f  = S (\s -> let (x,s') = applyS st s in applyS (f x) s')
+
+-- An example labeling binary tree leaves with "fresh" integers
+--
+data Tree a = Leaf a | Node (Tree a) (Tree a)
+  deriving Show
+
+tree :: Tree Char
+tree  = Node (Node (Leaf 'a') (Leaf 'b')) (Leaf 'c')
+
+fresh :: ST Int
+fresh  = S (\n -> (n , n+1))
+
+mlabel           :: Tree a -> ST (Tree (a,Int))
+mlabel (Leaf x)   = do n <- fresh
+                       return (Leaf (x,n))
+mlabel (Node l r) = do l' <- mlabel l
+                       r' <- mlabel r
+                       return (Node l' r')
+
+label   :: Tree a -> Tree (a,Int)
+label t  = fst (applyS (mlabel t) 0)    
+
+-- Excersises
+--
+app   :: (State -> State) -> ST State
+app f  =  S (\s -> (s, f s))
+
+fresh' :: ST Int
+fresh'  = app (+1) 
+
+mlabel'           :: Tree a -> ST (Tree (a,Int))
+mlabel' (Leaf x)   = do n <- fresh'
+                        return (Leaf (x,n))
+mlabel' (Node l r) = do l' <- mlabel' l
+                        r' <- mlabel' r
+                        return (Node l' r')
+
+run    :: ST a -> State -> a
+run st  = \s -> fst (applyS st s)
+
+label'   :: Tree a -> Tree (a,Int)
+label' t  = run (mlabel' t) 0
+
+
+
+
+
