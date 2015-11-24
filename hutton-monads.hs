@@ -208,8 +208,29 @@ mlabel' (Node l r) = do l' <- mlabel' l
 run    :: ST a -> State -> a
 run st  = \s -> fst (applyS st s)
 
-label'   :: Tree a -> Tree (a,Int)
-label' t  = run (mlabel' t) 0
+label'   :: Tree a -> Int -> Tree (a,Int)
+label' t  = \s -> run (mlabel' t) s
+
+-- Idea for Exercide: Label a tree with uuid's
+-- fuseOf:
+--    o  FPS RNG State Monad Example.
+--    o  UUID RFC
+--    o  The fresh int example and exercise above.
+--
+
+-- Not understood yet:
+-- allOf:
+--   o   The interaction ST irt. S and applyS 
+--   o   The interaction (>>=) and return irt. the do notation
+--       - Note: strange, as we do understand scala's map and flatMap
+--         irt. how for comprehensions are compiled into the same
+--         two functions.  Wasn't (>>=) supposed to be another
+--         symbol for scala's `flatMap` function?  And, What is the
+--         haskell symbol for scala's `map` function?
+
+-- Part 3 : The IO Monad
+--
+
 
 
 
